@@ -1,5 +1,7 @@
 #  vue3-kline-best5-dashboard
 
+![image](https://img.shields.io/badge/node-v22.13.1-green.svg) 
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
