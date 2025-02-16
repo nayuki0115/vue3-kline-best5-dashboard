@@ -28,9 +28,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import CryptoCard from '@/components/CryptoCard.vue'
 import ChartDetail from '@/components/ChartDetail.vue'
+import { useWebSocket } from '@/composables/useWebSocket'
+
+const { isConnected, lastMessage, subscribe, orderBooks } = useWebSocket()
+
+// 監聽連結消息
+// watch(isConnected, (connected) => {
+//   if (connected) {
+//     // 連結成功後，訂閱所需的頻道
+//     subscribe(['book.BTC_USDT.10', 'book.ETH_USDT.10', 'book.BNB_USDT.10', 'book.XRP_USDT.10', 'book.DOGE_USDT.10'])
+//   }
+// })
+
+const symbols = [
+  'BTC_USDT.10',
+  'ETH_USDT.10',
+  'XRP_USDT.10',
+  'SOL_USDT.10',
+  'DOGE_USDT.10',
+  'ADA_USDT.10',
+]
+
+watch(isConnected, (connected) => {
+  if (connected) {
+    // console.log('WebSocket connected, preparing to subscribe...')
+    const channels = symbols.map(symbol => `book.${symbol}`)
+    // console.log('Subscribing to channels:', channels)
+    subscribe(channels)
+  }
+})
+
+// 監聽消息
+// watch(lastMessage, (message) => {
+//   if (message && message.result) {
+//     // console.log('Received message:', message)
+//     // console.log('Received result:', message.result)
+//     // console.log('orderBooks', orderBooks)
+//   }
+// })
+
+watch(orderBooks, (newValue) => {
+  // console.log('OrderBooks updated:', newValue)
+}, { deep: true })
+
+
 
 const cardData: CryptoData[] = [
   { id: 8, amount: 2.5000, price: 45700.00, total: 2.5000, type: 'sell' },
@@ -45,7 +89,8 @@ const cardData: CryptoData[] = [
   { id: 7, amount: 2.2000, price: 45655.00, total: 10.9000, type: 'buy' },
 ]
 
-const cards = ref(Array(6).fill(cardData))
+// const cards = ref(Array(6).fill(cardData))
+const cards = ref()
 const selectedCard = ref<number | null>(null)
 
 const handleCardClick = (index: number) => {
