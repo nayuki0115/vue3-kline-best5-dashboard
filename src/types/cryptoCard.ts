@@ -7,9 +7,11 @@ interface CryptoData {
 }
 
 interface OrderLevel {
+  orders: string;
   price: number;
   quantity: number;
   marker: string;
+  accumulatedy: number;
 }
 
 interface OrderBook {

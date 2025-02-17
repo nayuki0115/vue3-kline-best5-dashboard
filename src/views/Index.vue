@@ -5,9 +5,10 @@
       <div class="cards-section">
         <div class="cards-grid">
           <CryptoCard
-            v-for="(card, index) in cards"
-            :key="index"
-            :data="cardData"
+            v-for="(card, index) in cardTitles"
+            :key="`${card}-${index}`"
+            :title="card"
+            :data="cardDatas[card]"
             :isActive="selectedCard === index"
             @card-click="handleCardClick(index)"
           />
@@ -28,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 import CryptoCard from '@/components/CryptoCard.vue'
 import ChartDetail from '@/components/ChartDetail.vue'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -44,12 +45,21 @@ const { isConnected, lastMessage, subscribe, orderBooks } = useWebSocket()
 // })
 
 const symbols = [
-  'BTC_USDT.10',
-  'ETH_USDT.10',
+  'BTCUSD-PERP.10',
+  'ETHUSD-PERP.10',
   'XRP_USDT.10',
   'SOL_USDT.10',
   'DOGE_USDT.10',
   'ADA_USDT.10',
+]
+
+const cardTitles = [
+  'BTCUSD-PERP',
+  'ETHUSD-PERP',
+  'XRP_USDT',
+  'SOL_USDT',
+  'DOGE_USDT',
+  'ADA_USDT',
 ]
 
 watch(isConnected, (connected) => {
@@ -61,19 +71,35 @@ watch(isConnected, (connected) => {
   }
 })
 
-// 監聽消息
-// watch(lastMessage, (message) => {
-//   if (message && message.result) {
-//     // console.log('Received message:', message)
-//     // console.log('Received result:', message.result)
-//     // console.log('orderBooks', orderBooks)
-//   }
-// })
 
+const cardDatas = ref({})
+const timestamp = ref()
 watch(orderBooks, (newValue) => {
   // console.log('OrderBooks updated:', newValue)
-}, { deep: true })
+  let tempOrderBooks = JSON.parse(JSON.stringify(orderBooks.value))
+  let tempTitles = JSON.parse(JSON.stringify(cardTitles))
+  let newItem = {}
+  for (let key of tempTitles) {
+    let obj = tempOrderBooks[key]
+    if(obj) {
+      let asks = obj.asks.slice(0, 5).map((item:OrderLevel, index: number)=> {
+        return {
+          id: item.orders, amount: item.quantity, price: item.price, total: item.quantity, type: 'sell' 
+        }
+      })
+      let bids = obj.bids.slice(0, 5).map((item: OrderLevel, index: number)=> {
+        return {
+          id: item.orders, amount: item.quantity, price: item.price, total: item.quantity, type: 'buy' 
+        }
+      })
 
+      newItem[key] = [...asks, ...bids]
+    }
+    
+  }
+  cardDatas.value = JSON.parse(JSON.stringify(newItem))
+  timestamp.value = Date.now()
+}, { deep: true })
 
 
 const cardData: CryptoData[] = [
@@ -88,12 +114,10 @@ const cardData: CryptoData[] = [
   { id: 5, amount: 1.6000, price: 45660.00, total: 8.7000, type: 'buy' },
   { id: 7, amount: 2.2000, price: 45655.00, total: 10.9000, type: 'buy' },
 ]
-
-// const cards = ref(Array(6).fill(cardData))
-const cards = ref()
 const selectedCard = ref<number | null>(null)
 
 const handleCardClick = (index: number) => {
+  console.log(index)
   // 如果點擊的是當前已選中的卡片，則關閉視窗
   if (selectedCard.value === index) {
     selectedCard.value = null;

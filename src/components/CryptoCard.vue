@@ -5,8 +5,8 @@
     @click="$emit('cardClick')"
   >
     <div class="card-header">
-      <h3>BTC/USDT</h3>
-      <span class="price-change">+2.34%</span>
+      <h3>{{ title ? title : '' }}</h3>
+      <!-- <span class="price-change">+2.34%</span> -->
     </div>
     <div class="card-content">
       <table>
@@ -18,7 +18,7 @@
             <th>累計</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody v-if="data">
           <tr v-for="item in data" 
               :key="item.id"
               :class="{ 'sell-row': item.type === 'sell', 'buy-row': item.type === 'buy' }"
@@ -37,7 +37,8 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
 
-defineProps<{
+const props = defineProps<{
+  title: string;
   data: CryptoData[];
   isActive: boolean;
 }>()
@@ -45,6 +46,7 @@ defineProps<{
 defineEmits<{
   (e: 'cardClick'): void;
 }>()
+
 </script>
 
 <style scoped>

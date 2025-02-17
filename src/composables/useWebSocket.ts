@@ -38,18 +38,6 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
           // 添加更多的數據驗證
           if (parsedMessage.result?.data) {
             const { instrument_name, data } = parsedMessage.result
-            // console.group()
-            // console.log('instrument_name', instrument_name)
-            // console.log('data', data)
-            // console.groupEnd()
-            // console.log('orderBooks.value', orderBooks.value)
-            
-            // 確保 bids 和 asks 存在且是數組
-            
-            // const bids = data?[0].bids ? data[0].bids : []
-            // const asks = data?[0].asks ? data[0].asks : []
-            
-            // console.log('bids', bids)
             // 更新訂單簿數據
             orderBooks.value = {
               ...orderBooks.value,
