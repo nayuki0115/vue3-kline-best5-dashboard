@@ -10,27 +10,117 @@
       </button>
     </div>
     <div class="chart-container">
-      <div class="chart-placeholder">K線圖區域
-        
-      </div>
+      <!-- <div class="chart-placeholder">K線圖區域
+        {{ data }}
+      </div> -->
+      <div ref="chartContainer" class="chart-placeholder"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
+import { defineProps, ref, watch, onUnmounted, onMounted   } from 'vue'
+import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, Time } from 'lightweight-charts'
 
-defineProps<{
+const props = defineProps<{
   symbol: string
   priceChange: string
+  data: CandlestickData
   onClose: () => void
 }>()
+
+interface ChartWithCandlesticks extends IChartApi {
+  addCandlestickSeries: (options?: CandlestickSeriesOptions) => ISeriesApi<'Candlestick'>;
+}
+
+interface CandlestickSeriesOptions {
+  upColor?: string;
+  downColor?: string;
+  borderVisible?: boolean;
+  wickUpColor?: string;
+  wickDownColor?: string;
+}
+
+const chartContainer = ref<HTMLElement | null>(null)
+const chart = ref<ChartWithCandlesticks | null>(null)
+const candlestickSeries = ref<ISeriesApi<'Candlestick'> | null>(null)
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (chartContainer.value) {
+    chart.value = createChart(chartContainer.value, {
+      layout: {
+        background: { type: ColorType.Solid, color: '#253248' },
+        textColor: '#D9D9D9',
+      },
+      grid: {
+        vertLines: { color: '#334158' },
+        horzLines: { color: '#334158' },
+      },
+      width: chartContainer.value.clientWidth,
+      height: 400,
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    }) as ChartWithCandlesticks
+
+
+    candlestickSeries.value = chart.value?.addCandlestickSeries?.({
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+    });
+
+
+    updateChartData();
+
+
+    resizeObserver = new ResizeObserver(entries => {
+      if (chart.value && entries[0].contentRect) {
+        chart.value.applyOptions({ 
+          width: entries[0].contentRect.width 
+        });
+      }
+    })
+
+    resizeObserver.observe(chartContainer.value);
+  }
+});
+
+watch(() => props.data, () => {
+  updateChartData()
+}, { deep: true })
+
+const updateChartData = () => {
+  if (candlestickSeries.value && props.data.length > 0) {
+    candlestickSeries.value.setData(props.data.map(item => ({
+      time: item.time / 1000 as Time, // 加入 Time 型別
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    })))
+  }
+}
+
+onUnmounted(() => {
+  if (chart.value) {
+    chart.value.remove();
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+})
 </script>
 
 <style scoped>
 .detail-view {
   flex: 1;
-  max-width: calc(100vw - 900px - 24px - 40px);
+  min-width: 400px; /* Add minimum width */
+  max-width: calc(100vw - 600px); /* Simplified calculation */
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -95,13 +185,14 @@ defineProps<{
 
 @media (max-width: 1600px) {
   .detail-view {
-    max-width: calc(100vw - 700px - 24px - 40px);
+    max-width: calc(100vw - 500px);
   }
 }
 
 @media (max-width: 1200px) {
   .detail-view {
     max-width: 100%;
+    min-width: 100%;
     height: 500px;
     position: static;
   }

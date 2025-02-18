@@ -9,8 +9,8 @@
             :key="`${title}`"
             :title="title"
             :data="data"
-            :isActive="selectedCard === index"
-            @card-click="handleCardClick(index)"
+            :isActive="selectedCardId === index"
+            @card-click="handleCardClick(index, title)"
           />
         </div>
       </div>
@@ -18,9 +18,10 @@
       <!-- 右側 K 線圖區域 -->
       <Transition name="fade">
         <ChartDetail
-          v-if="selectedCard !== null"
-          symbol="BTC/USDT"
+          v-if="selectedCardId !== null"
+          :symbol="selectedCardName"
           price-change="+2.34%"
+          :data="candlestickData"
           @close="closeDetail"
         />
       </Transition>
@@ -34,9 +35,9 @@ import { ref, watch, reactive, computed } from 'vue'
 import CryptoCard from '@/components/CryptoCard.vue'
 import ChartDetail from '@/components/ChartDetail.vue'
 import { useWebSocket } from '@/composables/useWebSocket'
-import { useDebounce } from "@/composables/useDebounce"
 
-const { isConnected, lastMessage, subscribe, orderBooks } = useWebSocket()
+const { isConnected, subscribe, orderBooks, getCandlestickData, subscribeCandlestick, unsubscribeCandlestick } = useWebSocket()
+import { useDebounce } from "@/composables/useDebounce"
 
 // 監聽連結消息
 // watch(isConnected, (connected) => {
@@ -78,7 +79,7 @@ const cardDatas = reactive({})
 watch(orderBooks, (newValue) => {
   // console.log('OrderBooks updated:', newValue)
   for (let key in newValue) {
-    let obj = newValue[key]
+    let obj = newValue[key];
     if (obj) {
       let asks = obj.asks.slice(0, 5).map((item) => ({
         id: item.orders,
@@ -96,15 +97,12 @@ watch(orderBooks, (newValue) => {
         type: 'buy',
       }));
 
-      
-      useDebounce(cardDatas[key] = [...asks, ...bids], 500)
-      
+      useDebounce(() => cardDatas[key] = [...asks, ...bids], 500)
     }
   }
 
   
 }, { deep: true })
-
 
 const cardData: CryptoData[] = [
   { id: 8, amount: 2.5000, price: 45700.00, total: 2.5000, type: 'sell' },
@@ -118,22 +116,33 @@ const cardData: CryptoData[] = [
   { id: 5, amount: 1.6000, price: 45660.00, total: 8.7000, type: 'buy' },
   { id: 7, amount: 2.2000, price: 45655.00, total: 10.9000, type: 'buy' },
 ]
-const selectedCard = ref<number | null>(null)
 
-const handleCardClick = (index: number) => {
-  console.log(index)
+const selectedCardId = ref<number | null>(null)
+const selectedCardName = ref<string>('')
+const timeFrame = ref('1m')
+
+const handleCardClick = (index: number, title: string) => {
   // 如果點擊的是當前已選中的卡片，則關閉視窗
-  if (selectedCard.value === index) {
-    selectedCard.value = null;
+  if (selectedCardId.value === index) {
+    unsubscribeCandlestick(selectedCardName.value, timeFrame.value)
+    selectedCardId.value = null
+    selectedCardName.value = ''
   } else {
     // 否則，開啟新點擊的卡片對應的視窗
-    selectedCard.value = index;
+    selectedCardId.value = index
+    selectedCardName.value = title
+    subscribeCandlestick(selectedCardName.value, timeFrame.value)
   }
 }
-
 const closeDetail = () => {
-  selectedCard.value = null
+  unsubscribeCandlestick(selectedCardName.value, timeFrame.value)
+  selectedCardId.value = null
+  selectedCardName.value = ''
 }
+
+const candlestickData = computed(() => 
+  getCandlestickData(selectedCardName.value)
+)
 </script>
 
 <style>

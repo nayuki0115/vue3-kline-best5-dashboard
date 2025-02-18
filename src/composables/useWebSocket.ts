@@ -11,7 +11,10 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
   const HEARTBEAT_INTERVAL = 30000
   let heartbeatTimer: NodeJS.Timeout | null = null
   let reconnectTimer: NodeJS.Timeout | null = null
+
   const orderBooks = ref<Record<string, OrderBook>>({})
+  const candlesticks = ref<Record<string, CandlestickData[]>>({})
+  const activeSubscriptions = ref<Set<string>>(new Set())
 
   // 建立連結
   const connect = () => {
@@ -23,6 +26,7 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
         isConnected.value = true
         reconnectAttempts.value = 0
         startHeartbeat()
+        resubscribeChannels() // 重新訂閱之前的頻道
       }
 
       ws.value.onmessage = (event) => {
@@ -35,27 +39,49 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
             return
           }
           
-          // 添加更多的數據驗證
+          // 處理訂單簿數據
           if (parsedMessage.result?.data) {
             const { instrument_name, data } = parsedMessage.result
+            const channel = parsedMessage.result.channel || ''
+
+
+            
             // 更新訂單簿數據
-            orderBooks.value = {
-              ...orderBooks.value,
-              [instrument_name]: {
-                // bids: data[0].bids,
-                // asks: data[0].asks
-                bids: data[0].bids.slice(0, 5).map(([price, quantity, orders]) => ({
-                  price: parseFloat(price),
-                  quantity: parseFloat(quantity),
-                  orders,
-                  accumulatedy: parseFloat(quantity)
-                })),
-                asks: data[0].asks.slice(0, 5).map(([price, quantity, orders]) => ({
-                  price: parseFloat(price),
-                  quantity: parseFloat(quantity),
-                  orders,
-                  accumulatedy: parseFloat(quantity)
-                }))
+            if (channel.startsWith('book')) {
+              orderBooks.value = {
+                ...orderBooks.value,
+                [instrument_name]: {
+                  bids: data[0].bids.slice(0, 5).map(([price, quantity, orders]) => ({
+                    price: parseFloat(price),
+                    quantity: parseFloat(quantity),
+                    orders,
+                    accumulatedy: parseFloat(quantity)
+                  })),
+                  asks: data[0].asks.slice(0, 5).map(([price, quantity, orders]) => ({
+                    price: parseFloat(price),
+                    quantity: parseFloat(quantity),
+                    orders,
+                    accumulatedy: parseFloat(quantity)
+                  }))
+                }
+              }
+            }
+
+            // 處理 K 線數據
+            if (channel.startsWith('candlestick')) {
+              const klineData = data.map((item: any) => ({
+                time: item.t,
+                open: parseFloat(item.o),
+                high: parseFloat(item.h),
+                low: parseFloat(item.l),
+                close: parseFloat(item.c),
+                volume: parseFloat(item.v)
+              }))
+
+              // 更新或添加新的 K 線數據
+              candlesticks.value = {
+                ...candlesticks.value,
+                [instrument_name]: klineData
               }
             }
             
@@ -83,13 +109,6 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     }
   }
 
-  // 使用 computed 來建立響應式的 getter
-  const getOrderBook = computed(() => {
-    console.log('orderBooks.value', orderBooks.value)
-    return (symbol: string): OrderBook => {
-      return orderBooks.value[symbol] || { bids: [], asks: [] }
-    }
-  })
 
   // 處理斷開連接
   const handleDisconnect = () => {
@@ -130,6 +149,14 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     }
   }
 
+  // 重新訂閱所有活動頻道
+  const resubscribeChannels = () => {
+    if (activeSubscriptions.value.size > 0) {
+      const channels = Array.from(activeSubscriptions.value)
+      subscribe(channels)
+    }
+  }
+
   // 訂閱頻道
   const subscribe = (channels: string[]) => {
     if (ws.value?.readyState === WebSocket.OPEN) {
@@ -139,6 +166,48 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
       console.error('WebSocket is not connected')
     }
   }
+
+  // 取消訂閱頻道
+  const unsubscribe = (channels: string[]) => {
+    if (ws.value?.readyState === WebSocket.OPEN) {
+      channels.forEach(channel => {
+        activeSubscriptions.value.delete(channel)
+      })
+      
+      const unsubscribeMsg = websocketApi.createUnsubscribeMessage(channels)
+      ws.value.send(JSON.stringify(unsubscribeMsg))
+    }
+  }
+
+  // 訂閱 K 線數據
+  const subscribeCandlestick = (instrumentName: string, timeFrame: string = '1m') => {
+    const channel = `candlestick.${timeFrame}.${instrumentName}`
+    console.log('channel', channel)
+    subscribe([channel])
+  }
+
+  // 取消訂閱 K 線數據
+  const unsubscribeCandlestick = (instrumentName: string, timeFrame: string = '1m') => {
+    const channel = `candlestick.${timeFrame}.${instrumentName}`
+    console.log('cancel K channel', channel)
+    unsubscribe([channel])
+  }
+
+  // 使用 computed 來建立響應式的 getter
+  const getOrderBook = computed(() => {
+    console.log('orderBooks.value', orderBooks.value)
+    return (symbol: string): OrderBook => {
+      return orderBooks.value[symbol] || { bids: [], asks: [] }
+    }
+  })
+
+  // 使用 computed 獲取特定交易對的 K 線數據
+  const getCandlestickData = computed(() => {
+    console.log('candlesticks', candlesticks.value)
+    return (symbol: string): CandlestickData[] => {
+      return candlesticks.value[symbol] || []
+    }
+  })
 
   // 關閉連接
   const disconnect = () => {
@@ -165,8 +234,13 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     isConnected,
     lastMessage,
     orderBooks,
-    getOrderBook: getOrderBook.value,  // 返回計算屬性的值
+    candlesticks,
+    getOrderBook: getOrderBook.value,
+    getCandlestickData: getCandlestickData.value,
     subscribe,
+    unsubscribe,
+    subscribeCandlestick,
+    unsubscribeCandlestick,
     disconnect,
     connect
   }
