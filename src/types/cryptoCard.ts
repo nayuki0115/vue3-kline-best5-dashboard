@@ -1,5 +1,5 @@
 interface CryptoData {
-  id: number;
+  id: number | string;
   amount: number;
   price: number;
   total: number;
@@ -17,4 +17,15 @@ interface OrderLevel {
 interface OrderBook {
   bids: OrderLevel[];
   asks: OrderLevel[];
+}
+
+interface WebSocketResponse {
+  id?: number
+  method?: string
+  code?: number
+  result?: {
+    channel?: string
+    instrument_name?: string
+    data?: any[]
+  }
 }

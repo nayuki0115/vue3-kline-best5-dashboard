@@ -19,8 +19,8 @@
           </tr>
         </thead>
         <tbody v-if="data">
-          <tr v-for="item in data" 
-              :key="item.id"
+          <tr v-for="(item, index) in data" 
+              :key="index"
               :class="{ 'sell-row': item.type === 'sell', 'buy-row': item.type === 'buy' }"
           >
             <td>{{ item.id }}</td>

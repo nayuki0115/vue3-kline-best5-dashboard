@@ -5,10 +5,10 @@
       <div class="cards-section">
         <div class="cards-grid">
           <CryptoCard
-            v-for="(card, index) in cardTitles"
-            :key="`${card}-${index}`"
-            :title="card"
-            :data="cardDatas[card]"
+            v-for="(data, title, index) in cardDatas"
+            :key="`${title}`"
+            :title="title"
+            :data="data"
             :isActive="selectedCard === index"
             @card-click="handleCardClick(index)"
           />
@@ -29,10 +29,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted, computed } from 'vue'
+import { ref, watch, reactive, computed } from 'vue'
+
 import CryptoCard from '@/components/CryptoCard.vue'
 import ChartDetail from '@/components/ChartDetail.vue'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { useDebounce } from "@/composables/useDebounce"
 
 const { isConnected, lastMessage, subscribe, orderBooks } = useWebSocket()
 
@@ -71,34 +73,36 @@ watch(isConnected, (connected) => {
   }
 })
 
+const cardDatas = reactive({})
 
-const cardDatas = ref({})
-const timestamp = ref()
 watch(orderBooks, (newValue) => {
   // console.log('OrderBooks updated:', newValue)
-  let tempOrderBooks = JSON.parse(JSON.stringify(orderBooks.value))
-  let tempTitles = JSON.parse(JSON.stringify(cardTitles))
-  let newItem = {}
-  for (let key of tempTitles) {
-    let obj = tempOrderBooks[key]
-    if(obj) {
-      let asks = obj.asks.slice(0, 5).map((item:OrderLevel, index: number)=> {
-        return {
-          id: item.orders, amount: item.quantity, price: item.price, total: item.quantity, type: 'sell' 
-        }
-      })
-      let bids = obj.bids.slice(0, 5).map((item: OrderLevel, index: number)=> {
-        return {
-          id: item.orders, amount: item.quantity, price: item.price, total: item.quantity, type: 'buy' 
-        }
-      })
+  for (let key in newValue) {
+    let obj = newValue[key]
+    if (obj) {
+      let asks = obj.asks.slice(0, 5).map((item) => ({
+        id: item.orders,
+        amount: item.quantity,
+        price: item.price,
+        total: item.quantity,
+        type: 'sell',
+      }));
 
-      newItem[key] = [...asks, ...bids]
+      let bids = obj.bids.slice(0, 5).map((item) => ({
+        id: item.orders,
+        amount: item.quantity,
+        price: item.price,
+        total: item.quantity,
+        type: 'buy',
+      }));
+
+      
+      useDebounce(cardDatas[key] = [...asks, ...bids], 500)
+      
     }
-    
   }
-  cardDatas.value = JSON.parse(JSON.stringify(newItem))
-  timestamp.value = Date.now()
+
+  
 }, { deep: true })
 
 
@@ -128,7 +132,7 @@ const handleCardClick = (index: number) => {
 }
 
 const closeDetail = () => {
-  selectedCard.value = null;
+  selectedCard.value = null
 }
 </script>
 
