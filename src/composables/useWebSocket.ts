@@ -14,6 +14,7 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
 
   const orderBooks = ref<Record<string, OrderBook>>({})
   const candlesticks = ref<Record<string, CandlestickData[]>>({})
+  const isInitialDataReceived = ref<Record<string, boolean>>({})
   const activeSubscriptions = ref<Set<string>>(new Set())
 
   // 建立連結
@@ -32,21 +33,21 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
       ws.value.onmessage = (event) => {
         try {
           const parsedMessage = JSON.parse(event.data)
-          // console.log('Received message:', parsedMessage)  // 查看接收到的原始數據
+          // console.log('Received message:', parsedMessage)  // 查看接收到的原始資料
           
           if (parsedMessage.method === 'public/heartbeat') {
             handleHeartbeat(parsedMessage.id)
             return
           }
           
-          // 處理訂單簿數據
+          // 處理 orderbook 資料
           if (parsedMessage.result?.data) {
             const { instrument_name, data } = parsedMessage.result
             const channel = parsedMessage.result.channel || ''
 
-
             
-            // 更新訂單簿數據
+            
+            // 更新orderbook 資料
             if (channel.startsWith('book')) {
               orderBooks.value = {
                 ...orderBooks.value,
@@ -67,25 +68,21 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
               }
             }
 
-            // 處理 K 線數據
+            // 處理 K 線資料
             if (channel.startsWith('candlestick')) {
-              const klineData = data.map((item: any) => ({
-                time: item.t,
-                open: parseFloat(item.o),
-                high: parseFloat(item.h),
-                low: parseFloat(item.l),
-                close: parseFloat(item.c),
-                volume: parseFloat(item.v)
-              }))
-
-              // 更新或添加新的 K 線數據
-              candlesticks.value = {
-                ...candlesticks.value,
-                [instrument_name]: klineData
+              
+              // 初始資料載入
+              if (Array.isArray(data) && !isInitialDataReceived.value[instrument_name]) {
+                const klineData = data.map(formatKlineData)
+                candlesticks.value[instrument_name] = klineData
+                isInitialDataReceived.value[instrument_name] = true
+              } else if (!Array.isArray(data)) {
+              // 處理即時更新
+                updateCandlestick(instrument_name, formatKlineData(data))
               }
             }
             
-            // console.log(`Updated orderbook for ${instrument_name}:`, orderBooks.value[instrument_name])
+
           }
           
           lastMessage.value = parsedMessage
@@ -110,7 +107,7 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
   }
 
 
-  // 處理斷開連接
+  // 處理斷開連結
   const handleDisconnect = () => {
     isConnected.value = false
     stopHeartbeat()
@@ -179,16 +176,16 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     }
   }
 
-  // 訂閱 K 線數據
-  const subscribeCandlestick = (instrumentName: string, timeFrame: string = '1m') => {
-    const channel = `candlestick.${timeFrame}.${instrumentName}`
+  // 訂閱 K 線資料
+  const subscribeCandlestick = (instrument_name: string, timeFrame: string = '1m') => {
+    const channel = `candlestick.${timeFrame}.${instrument_name}`
     console.log('channel', channel)
     subscribe([channel])
   }
 
-  // 取消訂閱 K 線數據
-  const unsubscribeCandlestick = (instrumentName: string, timeFrame: string = '1m') => {
-    const channel = `candlestick.${timeFrame}.${instrumentName}`
+  // 取消訂閱 K 線資料
+  const unsubscribeCandlestick = (instrument_name: string, timeFrame: string = '1m') => {
+    const channel = `candlestick.${timeFrame}.${instrument_name}`
     console.log('cancel K channel', channel)
     unsubscribe([channel])
   }
@@ -201,7 +198,7 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     }
   })
 
-  // 使用 computed 獲取特定交易對的 K 線數據
+  // 使用 computed 獲取特定交易對的 K 線資料
   const getCandlestickData = computed(() => {
     console.log('candlesticks', candlesticks.value)
     return (symbol: string): CandlestickData[] => {
@@ -209,7 +206,37 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     }
   })
 
-  // 關閉連接
+  // K線資料 format
+  const formatKlineData = (item: KlineData): CandlestickData => ({
+    time: item.t,
+    open: parseFloat(item.o),
+    high: parseFloat(item.h),
+    low: parseFloat(item.l),
+    close: parseFloat(item.c),
+    volume: parseFloat(item.v)
+  })
+
+  const updateCandlestick = (symbol: string, newData: CandlestickData) => {
+    if (!candlesticks.value[symbol]) {
+      candlesticks.value[symbol] = []
+    }
+    
+    const currentData = [...candlesticks.value[symbol]]
+    const lastIndex = currentData.length - 1
+    
+    if (lastIndex >= 0 && currentData[lastIndex].time === newData.time) {
+      currentData[lastIndex] = newData
+    } else {
+      currentData.push(newData)
+    }
+    
+    candlesticks.value = {
+      ...candlesticks.value,
+      [symbol]: currentData
+    }
+  }
+
+  // 關閉連結
   const disconnect = () => {
     if (ws.value) {
       ws.value.close()

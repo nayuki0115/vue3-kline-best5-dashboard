@@ -20,7 +20,6 @@
         <ChartDetail
           v-if="selectedCardId !== null"
           :symbol="selectedCardName"
-          price-change="+2.34%"
           :data="candlestickData"
           @close="closeDetail"
         />
@@ -67,9 +66,7 @@ const cardTitles = [
 
 watch(isConnected, (connected) => {
   if (connected) {
-    // console.log('WebSocket connected, preparing to subscribe...')
     const channels = symbols.map(symbol => `book.${symbol}`)
-    // console.log('Subscribing to channels:', channels)
     subscribe(channels)
   }
 })
@@ -77,7 +74,6 @@ watch(isConnected, (connected) => {
 const cardDatas = reactive({})
 
 watch(orderBooks, (newValue) => {
-  // console.log('OrderBooks updated:', newValue)
   for (let key in newValue) {
     let obj = newValue[key];
     if (obj) {
@@ -104,18 +100,6 @@ watch(orderBooks, (newValue) => {
   
 }, { deep: true })
 
-const cardData: CryptoData[] = [
-  { id: 8, amount: 2.5000, price: 45700.00, total: 2.5000, type: 'sell' },
-  { id: 5, amount: 1.8000, price: 45690.00, total: 4.3000, type: 'sell' },
-  { id: 12, amount: 3.2000, price: 45685.00, total: 7.5000, type: 'sell' },
-  { id: 4, amount: 1.5000, price: 45682.50, total: 9.0000, type: 'sell' },
-  { id: 7, amount: 2.1000, price: 45680.00, total: 11.1000, type: 'sell' },
-  { id: 9, amount: 2.8000, price: 45675.00, total: 2.8000, type: 'buy' },
-  { id: 6, amount: 1.9000, price: 45670.00, total: 4.7000, type: 'buy' },
-  { id: 8, amount: 2.4000, price: 45665.00, total: 7.1000, type: 'buy' },
-  { id: 5, amount: 1.6000, price: 45660.00, total: 8.7000, type: 'buy' },
-  { id: 7, amount: 2.2000, price: 45655.00, total: 10.9000, type: 'buy' },
-]
 
 const selectedCardId = ref<number | null>(null)
 const selectedCardName = ref<string>('')
@@ -159,9 +143,7 @@ const candlestickData = computed(() =>
 .content-wrapper {
   display: flex;
   gap: 24px;
-  max-width: 1800px;
-  margin: 0 auto;
-  width: 100%; /* 確保內容寬度不會超出容器 */
+  width: 100%;
 }
 
 .cards-section {
@@ -201,6 +183,7 @@ const candlestickData = computed(() =>
 @media (max-width: 1200px) {
   .content-wrapper {
     flex-direction: column;
+    margin-left: 0;
   }
   
   .cards-section {
