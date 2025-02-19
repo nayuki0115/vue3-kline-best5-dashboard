@@ -9,8 +9,8 @@
             :key="`${title}`"
             :title="title"
             :data="data"
-            :isActive="selectedCard === index"
-            @card-click="handleCardClick(index)"
+            :isActive="selectedCardId === index"
+            @card-click="handleCardClick(index, title)"
           />
         </div>
       </div>
@@ -18,9 +18,9 @@
       <!-- 右側 K 線圖區域 -->
       <Transition name="fade">
         <ChartDetail
-          v-if="selectedCard !== null"
-          symbol="BTC/USDT"
-          price-change="+2.34%"
+          v-if="selectedCardId !== null"
+          :symbol="selectedCardName"
+          :data="candlestickData"
           @close="closeDetail"
         />
       </Transition>
@@ -34,9 +34,9 @@ import { ref, watch, reactive, computed } from 'vue'
 import CryptoCard from '@/components/CryptoCard.vue'
 import ChartDetail from '@/components/ChartDetail.vue'
 import { useWebSocket } from '@/composables/useWebSocket'
-import { useDebounce } from "@/composables/useDebounce"
 
-const { isConnected, lastMessage, subscribe, orderBooks } = useWebSocket()
+const { isConnected, subscribe, orderBooks, getCandlestickData, subscribeCandlestick, unsubscribeCandlestick } = useWebSocket()
+import { useDebounce } from "@/composables/useDebounce"
 
 // 監聽連結消息
 // watch(isConnected, (connected) => {
@@ -66,9 +66,7 @@ const cardTitles = [
 
 watch(isConnected, (connected) => {
   if (connected) {
-    // console.log('WebSocket connected, preparing to subscribe...')
     const channels = symbols.map(symbol => `book.${symbol}`)
-    // console.log('Subscribing to channels:', channels)
     subscribe(channels)
   }
 })
@@ -76,9 +74,8 @@ watch(isConnected, (connected) => {
 const cardDatas = reactive({})
 
 watch(orderBooks, (newValue) => {
-  // console.log('OrderBooks updated:', newValue)
   for (let key in newValue) {
-    let obj = newValue[key]
+    let obj = newValue[key];
     if (obj) {
       let asks = obj.asks.slice(0, 5).map((item) => ({
         id: item.orders,
@@ -96,9 +93,7 @@ watch(orderBooks, (newValue) => {
         type: 'buy',
       }));
 
-      
-      useDebounce(cardDatas[key] = [...asks, ...bids], 500)
-      
+      useDebounce(() => cardDatas[key] = [...asks, ...bids], 500)
     }
   }
 
@@ -106,34 +101,32 @@ watch(orderBooks, (newValue) => {
 }, { deep: true })
 
 
-const cardData: CryptoData[] = [
-  { id: 8, amount: 2.5000, price: 45700.00, total: 2.5000, type: 'sell' },
-  { id: 5, amount: 1.8000, price: 45690.00, total: 4.3000, type: 'sell' },
-  { id: 12, amount: 3.2000, price: 45685.00, total: 7.5000, type: 'sell' },
-  { id: 4, amount: 1.5000, price: 45682.50, total: 9.0000, type: 'sell' },
-  { id: 7, amount: 2.1000, price: 45680.00, total: 11.1000, type: 'sell' },
-  { id: 9, amount: 2.8000, price: 45675.00, total: 2.8000, type: 'buy' },
-  { id: 6, amount: 1.9000, price: 45670.00, total: 4.7000, type: 'buy' },
-  { id: 8, amount: 2.4000, price: 45665.00, total: 7.1000, type: 'buy' },
-  { id: 5, amount: 1.6000, price: 45660.00, total: 8.7000, type: 'buy' },
-  { id: 7, amount: 2.2000, price: 45655.00, total: 10.9000, type: 'buy' },
-]
-const selectedCard = ref<number | null>(null)
+const selectedCardId = ref<number | null>(null)
+const selectedCardName = ref<string>('')
+const timeFrame = ref('1m')
 
-const handleCardClick = (index: number) => {
-  console.log(index)
+const handleCardClick = (index: number, title: string) => {
   // 如果點擊的是當前已選中的卡片，則關閉視窗
-  if (selectedCard.value === index) {
-    selectedCard.value = null;
+  if (selectedCardId.value === index) {
+    unsubscribeCandlestick(selectedCardName.value, timeFrame.value)
+    selectedCardId.value = null
+    selectedCardName.value = ''
   } else {
     // 否則，開啟新點擊的卡片對應的視窗
-    selectedCard.value = index;
+    selectedCardId.value = index
+    selectedCardName.value = title
+    subscribeCandlestick(selectedCardName.value, timeFrame.value)
   }
 }
-
 const closeDetail = () => {
-  selectedCard.value = null
+  unsubscribeCandlestick(selectedCardName.value, timeFrame.value)
+  selectedCardId.value = null
+  selectedCardName.value = ''
 }
+
+const candlestickData = computed(() => 
+  getCandlestickData(selectedCardName.value)
+)
 </script>
 
 <style>
@@ -150,9 +143,7 @@ const closeDetail = () => {
 .content-wrapper {
   display: flex;
   gap: 24px;
-  max-width: 1800px;
-  margin: 0 auto;
-  width: 100%; /* 確保內容寬度不會超出容器 */
+  width: 100%;
 }
 
 .cards-section {
@@ -192,6 +183,7 @@ const closeDetail = () => {
 @media (max-width: 1200px) {
   .content-wrapper {
     flex-direction: column;
+    margin-left: 0;
   }
   
   .cards-section {

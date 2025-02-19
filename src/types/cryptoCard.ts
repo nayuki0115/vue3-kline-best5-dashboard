@@ -19,6 +19,15 @@ interface OrderBook {
   asks: OrderLevel[];
 }
 
+interface CandlestickData {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
 interface WebSocketResponse {
   id?: number
   method?: string

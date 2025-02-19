@@ -1,18 +1,25 @@
 export const websocketApi = {
-  // 創建訂閱消息
+  // 建立訂閱消息
   createSubscribeMessage: (channels: string[]) => ({
     id: Date.now(),
     method: 'subscribe',
     params: { channels }
   }),
 
-  // 創建心跳消息
+  // 建立取消訂閱消息
+  createUnsubscribeMessage: (channels: string[]) => ({
+    id: Date.now(),
+    method: 'unsubscribe',
+    params: { channels }
+  }),
+
+  // 建立心跳消息
   createHeartbeatMessage: () => ({
     id: Date.now(),
     method: 'public/heartbeat'
   }),
 
-  // 創建心跳響應消息
+  // 建立心跳響應消息
   createHeartbeatResponse: (id: number) => ({
     id,
     method: 'public/respond-heartbeat'
