@@ -11,7 +11,7 @@
 - 即時更新交易對的最佳五檔
 - 同時顯示六個交易對資料 ( 有處理簡易 RWD，詳[後續說明](#rwd) )
 - 因 `book.{instrument_name}` 已[棄用](https://exchange-docs.crypto.com/exchange/v1/rest-ws/index.html#book-instrument_name)，改用 `book.{instrument_name}.{depth}` [接取](https://exchange-docs.crypto.com/exchange/v1/rest-ws/index.html#book-instrument_name-depth)資料
-- 點取卡片可叫出[K線圖](K線圖)燈箱
+- 點取卡片可叫出[K線圖](#k線圖)燈箱
 
 ### K線圖
 ![localhost_5173_ (1)](https://github.com/user-attachments/assets/a805bfc8-2a38-462a-b039-6b1d801956bc)
@@ -49,7 +49,7 @@
 ![image](https://img.shields.io/badge/vue-v3.5.13-brightgreen.svg) ![image](https://img.shields.io/badge/typescript-blue.svg)  
 
 ## 安裝和運行說明
-![image](https://img.shields.io/badge/node-v22.13.1-green.svg) 
+![image](https://img.shields.io/badge/node-v22.13.1-green.svg) ![image](https://img.shields.io/badge/pnpm-985F2A.svg) 
 ```bash
 git clone <repository-url>
 cd <project-name>
