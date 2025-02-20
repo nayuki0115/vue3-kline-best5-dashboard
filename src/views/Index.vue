@@ -4,14 +4,15 @@
       <!-- 左側卡片區域 -->
       <div class="cards-section">
         <div class="cards-grid">
-          <CryptoCard
-            v-for="title in cardTitles"
-            :key="`${title}`"
-            :title="title"
-            :data="cardDatas[title]"
-            :isActive="selectedCardId === cardTitles.indexOf(title)"
-            @card-click="handleCardClick(cardTitles.indexOf(title), title)"
-          />
+          <template v-for="title in cardTitles" :key="title">
+            <CryptoCard
+              v-if="cardDatas[title]?.length"
+              :title="title"
+              :data="cardDatas[title]"
+              :isActive="selectedCardId === cardTitles.indexOf(title)"
+              @card-click="handleCardClick(cardTitles.indexOf(title), title)"
+            />
+          </template>
         </div>
       </div>
 
