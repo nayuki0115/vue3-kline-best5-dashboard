@@ -45,3 +45,13 @@
   - 卡片：於畫面上半部，一排一張卡片，共六排
   - 燈箱：於卡片下方
 
+## 使用技術
+![image](https://img.shields.io/badge/vue-v3.5.13-brightgreen.svg) ![image](https://img.shields.io/badge/typescript-blue.svg)  
+
+## 安裝和運行說明
+```bash
+git clone <repository-url>
+cd <project-name>
+pnpm install
+pnpm run dev
+```
