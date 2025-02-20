@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, watch, onUnmounted, onMounted } from 'vue'
+import { defineProps, ref, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, Time } from 'lightweight-charts'
 
 const props = defineProps<{
@@ -25,90 +25,130 @@ const props = defineProps<{
   onClose: () => void
 }>()
 
-
 const chartContainer = ref<HTMLElement | null>(null)
 const chart = ref<IChartApi  | null>(null)
 const candlestickSeries = ref<ISeriesApi<'Candlestick'> | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
 const initChart = () => {
-  if (!chartContainer.value) return;
+  // 清理舊圖表
+  if (chart.value) {
+    chart.value.remove()
+    chart.value = null
+  }
+  if (candlestickSeries.value) {
+    candlestickSeries.value = null
+  }
 
-  // 建立圖表
-  chart.value = createChart(chartContainer.value, {
-    layout: {
-      background: { type: ColorType.Solid, color: '#253248' },
-      textColor: '#D9D9D9',
-    },
-    grid: {
-      vertLines: { color: '#334158' },
-      horzLines: { color: '#334158' },
-    },
-    width: chartContainer.value.clientWidth,
-    height: 400,
-    timeScale: {
-      timeVisible: true,
-      secondsVisible: false,
-    },
-  });
+  if (!chartContainer.value) {
+    console.error('chartContainer 不存在')
+    return
+  }
 
-  // 檢查是否能正常使用 addCandlestickSeries
-  if (chart.value && typeof chart.value.addCandlestickSeries === 'function') {
+  try {
+    // 建立圖表
+    chart.value = createChart(chartContainer.value, {
+      layout: {
+        background: { type: ColorType.Solid, color: '#253248' },
+        textColor: '#D9D9D9',
+      },
+      grid: {
+        vertLines: { color: '#334158' },
+        horzLines: { color: '#334158' },
+      },
+      width: chartContainer.value.clientWidth,
+      height: 400,
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    })
+
+    // 檢查圖表物件
+    if (!chart.value) {
+      console.error('圖表建立失敗')
+      return
+    }
+
+    // 建立 candlestick series
     candlestickSeries.value = chart.value.addCandlestickSeries({
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350',
-    });
-  } else {
-    console.error('圖表建立失敗或無法調用 addCandlestickSeries');
+    })
+
+    if (!candlestickSeries.value) {
+      console.error('K線圖系列建立失敗')
+      return
+    }
+
+    // 如果有資料就立即更新
+    if (props.data && props.data.length > 0) {
+      updateChartData()
+    }
+
+  } catch (error) {
+    console.error('圖表初始化失敗:', error)
   }
 }
 
-
 // 更新圖表資料
 const updateChartData = () => {
-  if (!candlestickSeries.value || !props.data || props.data.length === 0) {
-    console.error('缺少數據');
-    return;
+  if (!candlestickSeries.value) {
+    console.error('K線圖系列不存在，嘗試重新初始化')
+    initChart()
+    return
   }
 
-  // format 資料
-  const formattedData = props.data.map(item => ({
-    time: Math.floor(item.time / 1000), // 轉換為秒
-    open: Number(item.open),
-    high: Number(item.high),
-    low: Number(item.low),
-    close: Number(item.close),
-  }));
-
-  // 更新資料
-  candlestickSeries.value.setData(formattedData);
-
-  // 確保資料
-  if (chart.value) {
-    chart.value.timeScale().fitContent();
+  if (!props.data || props.data.length === 0) {
+    console.error('缺少數據')
+    return
   }
-};
+
+  try {
+    // format 資料
+    const formattedData = props.data.map(item => ({
+      time: Math.floor(item.time / 1000),
+      open: Number(item.open),
+      high: Number(item.high),
+      low: Number(item.low),
+      close: Number(item.close),
+    }))
+
+    // 更新資料
+    candlestickSeries.value.setData(formattedData)
+
+    // 調整視圖
+    if (chart.value) {
+      chart.value.timeScale().fitContent()
+    }
+  } catch (error) {
+    console.error('更新資料失敗:', error)
+  }
+}
 
 // 監聽資料變化
 watch(() => props.data, (newData) => {
-  if (newData && newData.length > 0) {
+  nextTick(() => {
     updateChartData()
-  }
-}, { deep: true, immediate: true })
+  })
+}, { deep: true })
 
+// 生命週期
 onMounted(() => {
-  initChart();
-});
+  nextTick(() => {
+    initChart()
+  })
+})
 
 onUnmounted(() => {
   if (chart.value) {
-    chart.value.remove();
+    chart.value.remove()
   }
   if (resizeObserver) {
-    resizeObserver.disconnect();
+    resizeObserver.disconnect()
   }
 })
 </script>

@@ -179,20 +179,17 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
   // 訂閱 K 線資料
   const subscribeCandlestick = (instrument_name: string, timeFrame: string = '1m') => {
     const channel = `candlestick.${timeFrame}.${instrument_name}`
-    console.log('channel', channel)
     subscribe([channel])
   }
 
   // 取消訂閱 K 線資料
   const unsubscribeCandlestick = (instrument_name: string, timeFrame: string = '1m') => {
     const channel = `candlestick.${timeFrame}.${instrument_name}`
-    console.log('cancel K channel', channel)
     unsubscribe([channel])
   }
 
   // 使用 computed 來建立響應式的 getter
   const getOrderBook = computed(() => {
-    console.log('orderBooks.value', orderBooks.value)
     return (symbol: string): OrderBook => {
       return orderBooks.value[symbol] || { bids: [], asks: [] }
     }
@@ -200,7 +197,6 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
 
   // 使用 computed 獲取特定交易對的 K 線資料
   const getCandlestickData = computed(() => {
-    console.log('candlesticks', candlesticks.value)
     return (symbol: string): CandlestickData[] => {
       return candlesticks.value[symbol] || []
     }
