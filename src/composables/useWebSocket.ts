@@ -272,11 +272,3 @@ export function useWebSocket(url: string = 'wss://stream.crypto.com/exchange/v1/
     connect
   }
 }
-
-interface WebSocketResponse {
-  id?: number
-  method: string
-  code?: number
-  message?: string
-  result?: any
-}
