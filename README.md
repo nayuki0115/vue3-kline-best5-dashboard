@@ -49,9 +49,27 @@
 ![image](https://img.shields.io/badge/vue-v3.5.13-brightgreen.svg) ![image](https://img.shields.io/badge/typescript-blue.svg)  
 
 ## 安裝和運行說明
+![image](https://img.shields.io/badge/node-v22.13.1-green.svg) 
 ```bash
 git clone <repository-url>
 cd <project-name>
 pnpm install
 pnpm run dev
+```
+## 專案結構
+```tree
+src/
+├── src/
+│   ├── components/      # 共用元件
+│   ├── composables/     # Vue3 組合式函數
+│   ├── router/          # 路由配置
+│   ├── types/           # TypeScript 型別定義
+│   ├── views/           # 頁面元件
+│   ├── App.vue          # 根元件
+│   └── main.ts          # 應用入口
+├── public/              # 公共資源
+├── index.html           # HTML 模板
+├── package.json         # 套件配置
+├── tsconfig.json        # TypeScript 設定
+└── vite.config.ts       # Vite 設定
 ```
