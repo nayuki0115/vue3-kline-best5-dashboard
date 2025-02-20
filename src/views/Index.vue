@@ -5,12 +5,12 @@
       <div class="cards-section">
         <div class="cards-grid">
           <CryptoCard
-            v-for="(data, title, index) in cardDatas"
+            v-for="title in cardTitles"
             :key="`${title}`"
             :title="title"
-            :data="data"
-            :isActive="selectedCardId === index"
-            @card-click="handleCardClick(index, title)"
+            :data="cardDatas[title]"
+            :isActive="selectedCardId === cardTitles.indexOf(title)"
+            @card-click="handleCardClick(cardTitles.indexOf(title), title)"
           />
         </div>
       </div>

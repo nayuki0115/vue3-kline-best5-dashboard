@@ -27,7 +27,7 @@ const props = defineProps<{
 
 
 const chartContainer = ref<HTMLElement | null>(null)
-  const chart = ref<IChartApi  | null>(null)
+const chart = ref<IChartApi  | null>(null)
 const candlestickSeries = ref<ISeriesApi<'Candlestick'> | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
