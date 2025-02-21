@@ -58,7 +58,7 @@ pnpm run dev
 ```
 ## 專案結構
 ```tree
-src/
+vue3-kline-best5-dashboard/
 ├── src/
 │   ├── components/      # 共用元件
 │   ├── composables/     # Vue3 組合式函數
