@@ -62,14 +62,14 @@ vue3-kline-best5-dashboard/
 ├── src/
 │   ├── components/      # 共用元件
 │   ├── composables/     # Vue3 組合式函數
-│   ├── router/          # 路由配置
+│   ├── router/          # 路由設定
 │   ├── types/           # TypeScript 型別定義
 │   ├── views/           # 頁面元件
 │   ├── App.vue          # 根元件
 │   └── main.ts          # 應用入口
 ├── public/              # 公共資源
 ├── index.html           # HTML 模板
-├── package.json         # 套件配置
+├── package.json         # 套件設定
 ├── tsconfig.json        # TypeScript 設定
 └── vite.config.ts       # Vite 設定
 ```
